@@ -1,0 +1,6 @@
+{
+  "name": "DWD AgriData Monitor",
+  "description": "Automatisiertes System zur Erfassung und Überwachung von Bodentemperatur- und Bodenfeuchtedaten des DWD.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
