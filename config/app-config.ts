@@ -35,14 +35,14 @@ export const CONFIG = {
     }
   ],
   settings: {
-    retryCount: parseInt(process.env.RETRY_COUNT || '3'),
-    retryDelayMs: parseInt(process.env.RETRY_DELAY_MS || '3000'),
-    timeout: parseInt(process.env.TIMEOUT_MS || '60000'),
-    imageTimeout: parseInt(process.env.IMAGE_TIMEOUT_MS || '90000'),
+    retryCount: Number.parseInt(process.env.RETRY_COUNT || '3'),
+    retryDelayMs: Number.parseInt(process.env.RETRY_DELAY_MS || '3000'),
+    timeout: Number.parseInt(process.env.TIMEOUT_MS || '60000'),
+    imageTimeout: Number.parseInt(process.env.IMAGE_TIMEOUT_MS || '90000'),
     headless: process.env.HEADLESS !== 'false',
     resolution: {
-      width: parseInt(process.env.SCREENSHOT_WIDTH || '1920'),
-      height: parseInt(process.env.SCREENSHOT_HEIGHT || '1080')
+      width: Number.parseInt(process.env.SCREENSHOT_WIDTH || '1920'),
+      height: Number.parseInt(process.env.SCREENSHOT_HEIGHT || '1080')
     },
     // monatlich am 1. des Monats um 17:00 (war faelschlich taeglich)
     monthlyDataCron: process.env.MONTHLY_DATA_CRON || '0 17 1 * *'

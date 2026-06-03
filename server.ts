@@ -8,6 +8,8 @@ import { logger } from './src/services/logger';
 import { imageService } from './src/services/imageService';
 import { dataService } from './src/services/dataService';
 import fs from 'fs-extra';
+import crypto from 'crypto';
+import archiver from 'archiver';
 
 async function startServer() {
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
@@ -22,6 +24,52 @@ async function startServer() {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
     next();
   });
+
+  // --- API-Token Absicherung ---
+  // Schreibende/sensible Endpunkte (Löschen + Tasks) erfordern einen gültigen Token.
+  // Quelle: VITE_API_TOKEN (gleiche Variable nutzt auch das Frontend ueber import.meta.env).
+  const API_TOKEN = process.env.VITE_API_TOKEN;
+  if (!API_TOKEN) {
+    console.warn(
+      '\x1b[33m[SECURITY] VITE_API_TOKEN ist nicht gesetzt. Gesch\u00fctzte Endpunkte (L\u00f6schen/Tasks) werden blockiert. ' +
+      'Bitte VITE_API_TOKEN in der .env setzen.\x1b[0m'
+    );
+  }
+
+  // Token aus Request extrahieren: "x-api-token" Header oder "Authorization: Bearer <token>".
+  const extractToken = (req: express.Request): string | undefined => {
+    const headerToken = req.header('x-api-token');
+    if (headerToken) return headerToken.trim();
+    const auth = req.header('authorization');
+    if (auth && auth.toLowerCase().startsWith('bearer ')) {
+      return auth.slice(7).trim();
+    }
+    return undefined;
+  };
+
+  // Konstant-zeitiger Vergleich, um Timing-Angriffe zu erschweren.
+  const tokensMatch = (a: string, b: string): boolean => {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  };
+
+  const requireAuth: express.RequestHandler = (req, res, next) => {
+    // Fail-secure: ohne konfigurierten Token kein Zugriff auf geschützte Routen.
+    if (!API_TOKEN) {
+      return res.status(503).json({
+        error: 'API token not configured',
+        detail: 'VITE_API_TOKEN ist serverseitig nicht gesetzt. Gesch\u00fctzte Endpunkte sind deaktiviert.'
+      });
+    }
+    const provided = extractToken(req);
+    if (!provided || !tokensMatch(provided, API_TOKEN)) {
+      console.warn(`[SECURITY] Abgelehnter Zugriff auf ${req.method} ${req.url} von ${req.ip}`);
+      return res.status(401).json({ error: 'Unauthorized', detail: 'G\u00fcltiger API-Token erforderlich (Header: x-api-token).' });
+    }
+    next();
+  };
 
   // API Routes
   app.get('/api/status', (req, res) => {
@@ -79,6 +127,44 @@ async function startServer() {
     }
   });
 
+  // Offen zugaenglicher Download: alle Bilder als ZIP (bewusst KEIN requireAuth).
+  app.get('/api/images/zip', async (req, res) => {
+    try {
+      const imagesRoot = path.join(process.cwd(), 'public', 'images');
+      await fs.ensureDir(imagesRoot);
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="wetterbilder_${stamp}.zip"`);
+
+      const archive = archiver('zip', { zlib: { level: 9 } });
+
+      archive.on('warning', (err) => {
+        console.warn('ZIP warning:', err);
+      });
+      archive.on('error', (err) => {
+        console.error('ZIP error:', err);
+        // Header sind ggf. schon gesendet -> Verbindung beenden.
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to create ZIP' });
+        } else {
+          res.destroy(err);
+        }
+      });
+
+      archive.pipe(res);
+      // Gesamten images-Ordner unter 'images/' im Archiv ablegen.
+      archive.directory(imagesRoot, 'images');
+      await archive.finalize();
+      console.log('Image ZIP archive streamed to client');
+    } catch (error) {
+      console.error('Failed to build image ZIP:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create ZIP' });
+      }
+    }
+  });
+
   app.get('/api/logs/:type', async (req, res) => {
     try {
       const type = req.params.type as 'download' | 'image' | 'error' | 'system';
@@ -89,7 +175,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/logs/:type', async (req, res) => {
+  app.delete('/api/logs/:type', requireAuth, async (req, res) => {
     try {
       const type = req.params.type as 'download' | 'image' | 'error' | 'system';
       await logger.clearLogs(type);
@@ -99,7 +185,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/tasks/images', async (req, res) => {
+  app.post('/api/tasks/images', requireAuth, async (req, res) => {
     try {
       logger.info('manual', 'Manual image task triggered');
       const results = await imageService.runAll();
@@ -109,7 +195,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/tasks/downloads', async (req, res) => {
+  app.post('/api/tasks/downloads', requireAuth, async (req, res) => {
     try {
       logger.info('manual', 'Manual download task triggered');
       const results = await dataService.runDailyDownloads();
@@ -119,7 +205,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/files', async (req, res) => {
+  app.delete('/api/files', requireAuth, async (req, res) => {
     try {
       const { filePath } = req.body;
       if (!filePath || typeof filePath !== 'string') {

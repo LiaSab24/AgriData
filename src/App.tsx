@@ -11,7 +11,8 @@ import {
   Clock,
   ExternalLink,
   ShieldAlert,
-  Trash2
+  Trash2,
+  FileArchive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -21,6 +22,13 @@ interface LogEntry {
   message: string;
   data?: any;
 }
+
+// Liefert den API-Token-Header fuer geschuetzte Endpunkte (Loeschen + Tasks).
+// Der Token kommt aus VITE_API_TOKEN (.env) und wird von Vite zur Build-/Dev-Zeit eingebettet.
+const authHeaders = (): Record<string, string> => {
+  const token = import.meta.env.VITE_API_TOKEN as string | undefined;
+  return token ? { 'x-api-token': token } : {};
+};
 
 export default function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -50,7 +58,7 @@ export default function App() {
     try {
       const res = await fetch('/api/files', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ filePath })
       });
       
@@ -73,7 +81,7 @@ export default function App() {
 
   const clearLogs = async () => {
     try {
-      const res = await fetch(`/api/logs/${logType}`, { method: 'DELETE' });
+      const res = await fetch(`/api/logs/${logType}`, { method: 'DELETE', headers: authHeaders() });
       if (res.ok) {
         setLogs([]);
         await fetchLogs(logType);
@@ -114,7 +122,7 @@ export default function App() {
   const triggerTask = async (task: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/tasks/${task}`, { method: 'POST' });
+      const res = await fetch(`/api/tasks/${task}`, { method: 'POST', headers: authHeaders() });
       if (!res.ok) throw new Error('Task returned error');
       
       await fetchLogs(logType);
@@ -228,6 +236,24 @@ export default function App() {
                   </div>
                   {loading ? <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" /> : <RefreshCw className="w-4 h-4 text-neutral-600 group-hover:text-emerald-400 transition-colors" />}
                 </button>
+
+                {/* Offen zugaenglicher Download aller Bilder als ZIP (kein Token noetig) */}
+                <a
+                  href="/api/images/zip"
+                  download
+                  className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all group hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-amber-500/20 rounded-xl group-hover:bg-amber-500/30 transition-colors border border-amber-500/20">
+                      <FileArchive className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-sm text-amber-50">Alle Bilder als ZIP</p>
+                      <p className="text-[11px] text-neutral-400 font-medium">Gesamtes Bild-Archiv herunterladen</p>
+                    </div>
+                  </div>
+                  <Download className="w-4 h-4 text-neutral-600 group-hover:text-amber-400 transition-colors" />
+                </a>
               </div>
             </section>
  
