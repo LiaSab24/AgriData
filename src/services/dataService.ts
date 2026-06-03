@@ -103,7 +103,10 @@ export const dataService = {
       },
       { 
         baseUrl: 'https://opendata.dwd.de/climate_environment/CDC/derived_germany/soil/daily/recent/', 
-        pattern: /tageswerte_BF_.*_akt\.zip/i,
+        // DWD hat die Struktur geaendert: statt einer gebuendelten 'tageswerte_BF_*_akt.zip'
+        // liegen hier nun pro Station gzippte Textdateien:
+        //   derived_germany_soil_daily_recent_v2_<STATION>.txt.gz
+        pattern: /derived_germany_soil_daily_recent_v2_\d+\.txt\.gz/i,
         category: 'soil_moisture'
       }
     ];
