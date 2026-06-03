@@ -14,7 +14,8 @@ import archiver from 'archiver';
 async function startServer() {
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
   const app = express();
-  const PORT = 3000;
+  // Railway (und andere Hoster) geben den Port via process.env.PORT vor.
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(cors());
   app.use(express.json());
