@@ -1,9 +1,19 @@
 name: DWD-Karten abrufen
 
-# Vorerst NUR manuell ausloesbar (Actions-Tab -> "Run workflow").
-# Der Zeitplan (schedule/cron) kommt erst dazu, wenn der manuelle Lauf
-# nachweislich funktioniert.
+# Taeglich 16:30 Ortszeit Berlin - ein Lauf fuer alle fuenf Karten.
+# Das timezone-Feld ist offiziell unterstuetzt (IANA-String); GitHub
+# handhabt damit die Sommer-/Winterzeit, ohne dass der Cron-Ausdruck
+# zweimal im Jahr angefasst werden muss.
+#
+# workflow_dispatch bleibt zusaetzlich bestehen: manuelles Ausloesen ueber
+# Actions-Tab -> "Run workflow" ist damit weiterhin jederzeit moeglich.
+#
+# Hinweis: GitHub garantiert die Startzeit nicht - bei hoher Last koennen
+# geplante Laeufe verzoegert werden oder einzeln ausfallen.
 on:
+  schedule:
+    - cron: '30 16 * * *'
+      timezone: 'Europe/Berlin'
   workflow_dispatch:
 
 # Der Workflow committet die heruntergeladenen Karten zurueck ins Repository,

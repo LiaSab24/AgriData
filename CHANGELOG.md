@@ -28,7 +28,33 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   `.gitkeep`; keine personenbezogenen Daten in den 26 getrackten Dateien;
   Commit-Autor ist durchgehend die `users.noreply.github.com`-Adresse.
 
-### `ci`: Workflow „DWD-Karten abrufen“ (vorerst nur manuell)
+### `ci`: Täglichen Zeitplan aktivieren, Testbilder entfernen
+
+- **Was:** Der Workflow läuft jetzt zusätzlich per `schedule` — **ein** Lauf
+  täglich um **16:30 Ortszeit Berlin** für alle fünf Karten.
+  `workflow_dispatch` bleibt erhalten, manuelles Auslösen ist weiter möglich.
+  Die 10 Bilder aus den beiden Testläufen wurden entfernt; `public/images/`
+  enthält wieder nur `.gitkeep`, das Archiv startet mit dem ersten echten Lauf.
+- **Warum ein Lauf statt der gestaffelten Intervalle:** In der Server-Variante
+  hatten die Karten unterschiedliche Cron-Zeiten (täglich 16:30, alle 5 bzw.
+  10 Tage 16:00). Ein einziger täglicher Lauf für alle fünf ist deutlich
+  einfacher zu überblicken und kostet nichts zusätzlich — die Laufzeit liegt
+  bei knapp 20 Sekunden.
+- **Zeitzone:** Statt den Cron in UTC zu rechnen (`30 14 * * *` im Sommer,
+  `30 15 * * *` im Winter) wird das offiziell unterstützte `timezone`-Feld mit
+  `Europe/Berlin` genutzt. Damit muss der Ausdruck nicht zweimal im Jahr zur
+  Zeitumstellung angefasst werden.
+- **Zur 60-Tage-Regel:** GitHub deaktiviert geplante Workflows nach 60 Tagen
+  ohne Repository-Aktivität, wobei ausschließlich **neue Commits** zählen. Da
+  jeder Lauf committet, hält der Workflow sich selbst am Leben — eine separate
+  Keepalive-Konstruktion ist nicht nötig. Nur wenn 60 Tage am Stück *alle*
+  Downloads fehlschlügen, gäbe es keinen Commit; das wäre an den roten Läufen
+  aber sichtbar.
+- **Bekannte Einschränkung:** GitHub garantiert die Startzeit geplanter Läufe
+  nicht — bei hoher Last können sie sich verzögern oder einzeln ausfallen. Für
+  ein tägliches Archiv unkritisch, aber kein Grund, auf die Minute zu bauen.
+
+### `ci`: Workflow „DWD-Karten abrufen“ (zunächst nur manuell)
 
 - **Was:** `.github/workflows/fetch-dwd-images.yml` mit **ausschließlich**
   `workflow_dispatch` — kein Zeitplan. Dazu `scripts/fetch-images.ts`
