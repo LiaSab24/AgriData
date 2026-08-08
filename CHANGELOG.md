@@ -28,6 +28,41 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   `.gitkeep`; keine personenbezogenen Daten in den 26 getrackten Dateien;
   Commit-Autor ist durchgehend die `users.noreply.github.com`-Adresse.
 
+### `ci`: Workflow „DWD-Karten abrufen“ (vorerst nur manuell)
+
+- **Was:** `.github/workflows/fetch-dwd-images.yml` mit **ausschließlich**
+  `workflow_dispatch` — kein Zeitplan. Dazu `scripts/fetch-images.ts`
+  (npm-Script `fetch:images`), das `imageService.runAll()` anstößt und das
+  Ergebnis auswertet. Die Download-Logik selbst (Retries,
+  Content-Type-Prüfung, DWD-Referer) bleibt bewusst im bestehenden
+  `imageService` und wird nicht dupliziert.
+- **Warum zuerst ohne Cron:** Ein manueller Lauf ist überprüfbar, bevor
+  irgendetwas automatisch und unbeobachtet läuft. Der `schedule`-Trigger
+  kommt erst dazu, wenn die Kette nachweislich funktioniert.
+- **`.gitignore` umgedreht:** `public/images/*` war ignoriert (Laufzeit-
+  Artefakt der Server-Variante). Hier **ist das Repository das Archiv**,
+  also muss der Ordner versioniert werden. `data/` und `logs/` bleiben
+  ignoriert. Ohne diese Änderung hätte der Workflow nichts committen können —
+  er wäre grün durchgelaufen und hätte trotzdem nichts archiviert.
+- **Fehlerverhalten:** Der Download-Schritt läuft mit `continue-on-error`,
+  damit Teilerfolge trotzdem committet werden; ein Folgeschritt markiert den
+  Lauf danach rot. So geht bei einer ausgefallenen Karte weder Datenbestand
+  verloren, noch bleibt der Ausfall unbemerkt.
+- **Verifiziert:** Zwei manuelle Läufe grün (17 s bzw. 20 s). Lauf 1 hat
+  Commit `a2447d8` erzeugt — 5 PNGs, 11–22 KB, insgesamt 85 KB. Damit ist die
+  ganze Kette belegt: Download → Commit → Push durch den Workflow selbst.
+  Vorher lokal geprüft: `npm run fetch:images` 5/5, gültige PNGs laut `file`,
+  `tsc --noEmit` fehlerfrei.
+- **Nachgezogen:** `actions/checkout` und `actions/setup-node` von v4 auf v5,
+  nachdem Lauf 1 eine Node-20-Deprecation-Warnung erzeugt hatte. Lauf 2 ist
+  warnungsfrei.
+- **Offen — Duplikate:** Der Dateiname enthält einen Zeitstempel, also legt
+  *jeder* Lauf fünf neue Dateien an, auch wenn die DWD-Karte unverändert ist.
+  Bei einem täglichen Cron ist das gewollt (eine Momentaufnahme pro Tag), bei
+  mehrfachem manuellem Auslösen entstehen Dubletten — die zwei Testläufe haben
+  entsprechend 10 statt 5 Bilder erzeugt. Noch **nicht** entschieden, ob
+  identische Inhalte künftig übersprungen werden sollen.
+
 ### `build`: `playwright-chromium` entfernen
 
 - **Was:** Dependency deinstalliert und der Browser-Fallback in
