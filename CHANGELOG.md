@@ -53,6 +53,18 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   den Duplikat-Schutz unkritisch, weil zwischen zwei Läufen ein Tag liegt.
   Bei mehreren Fehlläufen innerhalb weniger Sekunden könnten allerdings
   doppelte Issues entstehen.
+- **Stolperstein (behoben):** Die erste Fassung hatte die Workflow-Datei
+  unparsebar gemacht. Die mehrzeiligen `--body`-Strings enthielten Zeilen in
+  Spalte 0 — damit endet ein YAML-Block-Skalar (`run: |`) vorzeitig, und
+  `Lauf: $RUN_URL"` wurde als YAML-Schlüssel gelesen. Verräterisch war, dass
+  GitHub den Workflow danach unter seinem **Dateipfad** statt unter seinem
+  Namen listete; das ist das Erkennungszeichen für einen Parse-Fehler. Die
+  Textkörper laufen jetzt über Heredocs an `--body-file -` und bleiben damit
+  eingerückt.
+- **Lokale Prüfung etabliert:** YAML mit `ruby -ryaml` parsen, die `run`-Blöcke
+  extrahieren und einzeln durch `bash -n` schicken. Damit fällt so ein Fehler
+  auf, bevor er gepusht wird — `python3 -c "import yaml"` steht auf diesem
+  Rechner nicht zur Verfügung.
 - **Nicht automatisierbar:** Die kontoweite Einstellung, ob GitHub überhaupt
   E-Mails zu Actions verschickt, liegt unter
   `github.com/settings/notifications` und ist nur über die Weboberfläche
