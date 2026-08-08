@@ -91,6 +91,38 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   der ausgelieferte Bundle-Inhalt ist also nachweislich derselbe.
 - **Betroffen:** nur `package-lock.json`.
 
+### `chore`: lokale `.env` mit `VITE_API_TOKEN` anlegen
+
+- **Was:** `.env` im Projektwurzelverzeichnis angelegt, mit einem per
+  `openssl rand -hex 32` erzeugten Token und Dateirechten `600`.
+  Bewusst **nur** diese eine Variable — nicht `.env.example` komplett kopiert.
+  Nicht im Repository (durch `.gitignore` → `.env*` abgedeckt); dieser
+  Eintrag dokumentiert lediglich den Einrichtungsschritt.
+- **Warum:** `npm run dev` gab bei jedem Start
+  `[SECURITY] VITE_API_TOKEN ist nicht gesetzt` aus, und die schreibenden
+  Endpunkte (`DELETE /api/logs/:type`, `DELETE /api/files`,
+  `POST /api/tasks/*`) antworteten fail-secure mit 503 — lokal also gar nicht
+  auslösbar.
+- **Stolperstein:** `.env.example` enthält neben dem Token auch Cron-Werte
+  (`BF_SCHLUF_CRON="0 16 * * *"` usw.), die von den aktiven Code-Defaults
+  abweichen (Scheduler läuft mit `30 16 * * *`). Ein vollständiges Kopieren
+  der Beispieldatei hätte die Zeitpläne still verstellt.
+- **Verifiziert:** Startlog ohne `[SECURITY]`-Warnung. Auth-Matrix gegen
+  `DELETE /api/logs/errors`: ohne Token 401, falscher Token 401,
+  `x-api-token` 200, `Authorization: Bearer` 200 — die 503-Antwort ist damit
+  weg. Frontend lädt mit 0 Konsolenfehlern und 0 fehlgeschlagenen Requests.
+- **Offener Punkt (Sicherheit):** Es wurde nachgewiesen, dass der Token durch
+  den `VITE_`-Prefix im ausgelieferten Client-Modul steht — im dev-Server
+  ist er im transformierten `src/App.tsx` im Klartext auffindbar. Gegenüber
+  jemandem, der das Dashboard im Browser öffnet, ist er damit kein Geheimnis;
+  er verhindert nur den blinden API-Zugriff ohne Dashboard. Lokal
+  unproblematisch, auf dem öffentlichen Railway-Deployment bedeutet es aber,
+  dass Löschen und Task-Auslösen für jeden Seitenbesucher möglich sind.
+  Ein echter Schutz bräuchte serverseitige Sessions oder eine
+  vorgelagerte Zugriffssperre für das Dashboard. **Nicht geändert.**
+- **Deployment-Hinweis:** `.env` wird nicht deployt — auf Railway muss
+  `VITE_API_TOKEN` separat als Umgebungsvariable gesetzt werden.
+
 ### Hinweise (ohne Code-Änderung)
 
 - Die Warnungen bei `npm i` (`npm warn allow-scripts`, Funding-Hinweis,
@@ -105,7 +137,8 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   `define` ein, aber kein Client-Code referenziert ihn und im gebauten Bundle
   taucht er nicht auf. `VITE_API_TOKEN` landet bewusst im Bundle
   (so dokumentiert in `src/App.tsx`), der echte Wert bleibt über `.env*`
-  aus der Versionskontrolle heraus.
+  aus der Versionskontrolle heraus. Zur Tragweite dieser Einbettung siehe
+  `chore`: lokale `.env` weiter oben in dieser Session.
 
 ---
 
