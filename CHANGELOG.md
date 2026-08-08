@@ -63,6 +63,34 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
 - **Was:** Markdown-Formatierung — nach jeder Überschrift eine Leerzeile.
 - **Warum:** Reine Formatierung, kein inhaltlicher Unterschied.
 
+### `chore(deps)`: alle 11 Sicherheitslücken schließen (0 Vulnerabilities)
+
+- **Was:** `npm audit fix` **ohne** `--force` ausgeführt, danach zusätzlich
+  `npm update tsx`. Angehoben wurden `axios` → 1.19.0, `vite` → 6.4.3,
+  `postcss` → 8.5.26, `protobufjs` → 7.6.5, `nanoid` → 3.3.18, `ws` → 8.21.3,
+  `form-data` → 4.0.6, `brace-expansion` → 2.1.4, `tsx` → 4.23.11
+  (zieht `esbuild` → 0.28.1) sowie `body-parser` und `@babel/core`.
+- **Warum:** Löst den in der vorigen Session als „noch offen“ notierten Punkt:
+  11 Schwachstellen (3 low, 8 high), alle transitiv. Schwerpunkt waren zehn
+  `axios`-Advisories (Prototype Pollution, DoS, `maxBodyLength`-Bypass) und
+  Path Traversal in `postcss` beim Auto-Laden von Source Maps.
+- **Stolperstein:** `npm audit fix` allein wurde nicht fertig — der letzte
+  Befund (`esbuild` unterhalb von `tsx`) blieb stehen, obwohl npm
+  „fix available“ meldete; wiederholte Läufe änderten nichts. `--force` wäre
+  dafür trotzdem falsch gewesen: `tsx` stand auf `^4.21.0`, das aktuelle
+  4.23.11 lag längst innerhalb dieses Bereichs. Ein schlichtes
+  `npm update tsx` genügte. `npm audit fix` ist bei verschachtelten
+  Transitiv-Abhängigkeiten also nicht vollständig — der Rest lohnt eine
+  manuelle Prüfung, bevor man zu `--force` greift.
+- **Verifiziert:** `npm audit` meldet **0 Vulnerabilities**. `npm run lint`
+  (`tsc --noEmit`) fehlerfrei, `npm run build` grün (Vite: 2075 Module +
+  esbuild-Server-Bundle), `npx tsx --version` → 4.23.11 lauffähig.
+  `package.json` blieb **unverändert** — ausschließlich semver-kompatible
+  Updates, keine Breaking Changes. Die Build-Artefakte haben identische
+  Hashes wie vor dem Update (`index-B5fZos3B.js`, `index-0LW27zzw.css`),
+  der ausgelieferte Bundle-Inhalt ist also nachweislich derselbe.
+- **Betroffen:** nur `package-lock.json`.
+
 ### Hinweise (ohne Code-Änderung)
 
 - Die Warnungen bei `npm i` (`npm warn allow-scripts`, Funding-Hinweis,
@@ -70,9 +98,9 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   (`esbuild`, `playwright-chromium`, `protobufjs`, `fsevents`, `@google/genai`)
   und haben keinen Bezug zu den Font-Paketen — diese haben `scripts: {}`.
   esbuild-Binary und Playwright-Browser sind vorhanden, der Build läuft.
-- `npm audit` meldet unverändert **11 Schwachstellen (3 low, 8 high)** in
+- `npm audit` meldete zunächst **11 Schwachstellen (3 low, 8 high)** in
   `postcss`, `protobufjs`, `vite` und `ws`. Alle transitiv, keine davon neu
-  hinzugekommen. **Noch offen** — `npm audit fix` steht aus.
+  hinzugekommen. **Erledigt** — siehe `chore(deps)` weiter oben in dieser Session.
 - Geprüft und unbedenklich: `vite.config.ts` bettet `GEMINI_API_KEY` per
   `define` ein, aber kein Client-Code referenziert ihn und im gebauten Bundle
   taucht er nicht auf. `VITE_API_TOKEN` landet bewusst im Bundle
