@@ -1,4 +1,3 @@
-import { chromium } from 'playwright-chromium';
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
@@ -66,32 +65,17 @@ export const imageService = {
       throw new Error(`Direct download of ${url} failed after ${maxAttempts} attempt(s): ${msg}`);
     }
 
-    // Normal Playwright flow only for non-image URLs
-    await logger.info('image', `Url is not a direct image, using browser fallback for ${name}`);
-    const browser = await chromium.launch({ 
-      headless: CONFIG.settings.headless,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    
-    try {
-      const page = await browser.newPage({
-        viewport: CONFIG.settings.resolution
-      });
-      
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForTimeout(3000);
-      
-      // Try to take a screenshot as fallback
-      await page.screenshot({ path: filePath, fullPage: true });
-      await logger.info('image', `captured screenshot for ${name} via browser`, { publicPath });
-      
-      return publicPath;
-    } catch (error) {
-      await logger.error('image', `Failed to capture ${name}`, error);
-      throw error;
-    } finally {
-      await browser.close();
-    }
+    // Non-image URLs used to be captured via a Playwright screenshot. That
+    // fallback was removed together with the playwright-chromium dependency:
+    // every configured task points at a direct .png, so the branch never ran,
+    // while the Chromium binaries dominated install size and CI time.
+    // To bring it back, re-add playwright-chromium as a devDependency and
+    // restore the chromium.launch() block from the git history.
+    await logger.error('image', `Url is not a direct image and the browser fallback was removed: ${name}`);
+    throw new Error(
+      `${url} is not a direct image URL (.png/.jpg/.jpeg/.webp). ` +
+      `The browser screenshot fallback has been removed - configure a direct image URL instead.`
+    );
   },
 
   async runAll() {

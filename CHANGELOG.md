@@ -4,6 +4,62 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
 
 ---
 
+## Session 08.08.2026 (Fortsetzung — erste Änderungen in `AgriData`)
+
+### `chore`: Repository-Abspaltung von `AgriDataDWD` nach `AgriData`
+
+- **Was:** Dieses öffentliche Repository (`LiaSab24/AgriData`) ist ein
+  vollständiger Klon von `LiaSab24/AgriDataDWD` inklusive der kompletten
+  Historie bis Commit `2286e8f`. Ab hier laufen beide getrennt weiter.
+- **Warum:** `AgriDataDWD` bleibt privat und unverändert als lauffähige
+  Server-Version (Express + `node-cron`, bisher auf Railway). `AgriData` wird
+  die serverlose Variante: Abruf per GitHub Actions, Archiv im Repository,
+  Auslieferung statisch. Zwei getrennte Repos, weil noch offen ist, in welche
+  Richtung die App sich entwickelt — die alte Version bleibt so als
+  Rückfalloption erhalten.
+- **Warum öffentlich:** GitHub Actions hat in öffentlichen Repos unbegrenzte
+  Minuten (privat: 2.000/Monat), GitHub Pages ist für private Repos nur mit
+  einem Pro-Plan verfügbar, und die archivierten DWD-Karten sind ohnehin frei
+  zugängliche Daten. Damit entfällt der Bedarf an einem externen Hoster
+  (Netlify/Cloudflare) vollständig.
+- **Vor der Veröffentlichung geprüft:** `.env` war nie committet; die gesamte
+  Historie enthält keine echten Secrets (nur Dokumentation *über* Tokens und
+  den Platzhalter `CHANGE_ME_…`); `data/` und `logs/` enthalten nur
+  `.gitkeep`; keine personenbezogenen Daten in den 26 getrackten Dateien;
+  Commit-Autor ist durchgehend die `users.noreply.github.com`-Adresse.
+
+### `build`: `playwright-chromium` entfernen
+
+- **Was:** Dependency deinstalliert und der Browser-Fallback in
+  `src/services/imageService.ts` entfernt. Nicht-Bild-URLs werfen jetzt einen
+  expliziten Fehler statt still einen Screenshot zu versuchen.
+- **Warum:** Der Pfad war toter Code. Alle fünf Tasks in
+  `config/app-config.ts` sind direkte `.png`-URLs, und der Direkt-Download
+  weigert sich ausdrücklich, für Bilder auf den Browser zurückzufallen
+  („should probably not fall back to browser screenshots of error pages“) —
+  `chromium.launch()` wurde also nie erreicht. Das Paket stand zudem in
+  `dependencies`, nicht in `devDependencies`, und wäre in jeder Produktions-
+  und CI-Installation mitgezogen worden.
+- **Stolperstein:** Das npm-Paket selbst ist nur 44 KB — die Kosten stecken im
+  Install-Skript, das die Chromium-Binaries nachlädt (lokaler Cache unter
+  `~/Library/Caches/ms-playwright`: 907 MB). Lokal fiel das bisher nicht auf,
+  weil npm die Install-Skripte per `allowScripts` blockiert hatte. In GitHub
+  Actions, wo Skripte normal laufen, hätte jeder tägliche Lauf diesen
+  Download ausgelöst.
+- **Verifiziert:** `tsc --noEmit` fehlerfrei, `npm run build` grün,
+  `npm audit` 0 Vulnerabilities. `node_modules` von 240 MB auf 209 MB.
+  Keine Referenz auf `playwright`/`chromium` mehr im Code außer dem
+  erklärenden Kommentar.
+- **Rückweg:** Falls später eine DWD-*Seite* statt eines direkten Bildlinks
+  abgegriffen werden soll, ist `playwright-chromium` als **devDependency**
+  wieder aufzunehmen und der `chromium.launch()`-Block aus der Historie
+  zurückzuholen; der Kommentar in `imageService.ts:69` verweist darauf.
+- **Nicht angefasst:** `CONFIG.settings.headless` und
+  `CONFIG.settings.resolution` in `config/app-config.ts` werden dadurch nicht
+  mehr gelesen. Bewusst stehen gelassen, um die Änderung klein zu halten.
+
+---
+
 ## Session 08.08.2026
 
 ### `build`: Google Fonts durch self-hosted `@fontsource-variable` ersetzen
