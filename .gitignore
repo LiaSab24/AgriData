@@ -7,11 +7,14 @@ coverage/
 .env*
 !.env.example
 
-# Runtime-Artefakte (heruntergeladene Bilder/Daten/Logs)
-public/images/*
+# Das Bild-Archiv wird in diesem Repository BEWUSST versioniert:
+# GitHub Actions laedt die DWD-Karten und committet sie, das Repo ist das
+# Archiv. Deshalb ist public/images/ hier - anders als in AgriDataDWD -
+# nicht ignoriert.
+#
+# Runtime-Artefakte, die weiterhin nicht ins Repo gehoeren:
 data/*
 logs/*
-!public/images/.gitkeep
 !data/.gitkeep
 !logs/.gitkeep
 
