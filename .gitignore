@@ -14,3 +14,29 @@ logs/*
 !public/images/.gitkeep
 !data/.gitkeep
 !logs/.gitkeep
+
+# custom config files
+config/*.local.js
+claudedoc.md
+
+# Claude Code – maschinenlokale Einstellungen
+# (settings.json, skills/, agents/ bewusst NICHT ignoriert – die duerfen ins Repo)
+.claude/settings.local.json
+
+# macOS
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Tool-Caches
+*.tsbuildinfo
+.eslintcache
+.npm
+dist-ssr
+*.local
