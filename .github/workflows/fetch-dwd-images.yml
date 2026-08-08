@@ -83,26 +83,33 @@ jobs:
 
           nummer=$(gh issue list --state open --label abruf-fehler --limit 1 --json number --jq '.[0].number // empty')
 
+          # Die Textkoerper werden ueber Heredocs uebergeben. Ein mehrzeiliges
+          # --body direkt im YAML wuerde den Block-Skalar beenden, sobald eine
+          # Zeile in Spalte 0 beginnt - die Datei waere dann nicht mehr parsebar.
           if [ -n "$nummer" ]; then
-            gh issue comment "$nummer" --body "Erneut fehlgeschlagen am $(date -u '+%Y-%m-%d %H:%M UTC').
+            gh issue comment "$nummer" --body-file - <<EOF
+          Erneut fehlgeschlagen am $(date -u '+%Y-%m-%d %H:%M UTC').
 
-Lauf: $RUN_URL"
+          Lauf: $RUN_URL
+          EOF
             echo "Bestehendes Issue #${nummer} kommentiert."
           else
             gh issue create \
               --title "DWD-Abruf fehlgeschlagen" \
               --label abruf-fehler \
-              --body "Der automatische Abruf der DWD-Karten ist fehlgeschlagen.
+              --body-file - <<EOF
+          Der automatische Abruf der DWD-Karten ist fehlgeschlagen.
 
-Erstmals am $(date -u '+%Y-%m-%d %H:%M UTC').
-Lauf: $RUN_URL
+          Erstmals am $(date -u '+%Y-%m-%d %H:%M UTC').
+          Lauf: $RUN_URL
 
-Im Schritt \"DWD-Karten herunterladen\" steht, welche Karte betroffen ist.
-Haeufigste Ursache: Der DWD hat eine Bild-URL geaendert - dann muss der
-Eintrag in \`config/app-config.ts\` angepasst werden.
+          Im Schritt "DWD-Karten herunterladen" steht, welche Karte betroffen ist.
+          Haeufigste Ursache: Der DWD hat eine Bild-URL geaendert - dann muss der
+          Eintrag in \`config/app-config.ts\` angepasst werden.
 
-Dieses Issue schliesst sich automatisch, sobald ein Abruf wieder
-vollstaendig durchlaeuft."
+          Dieses Issue schliesst sich automatisch, sobald ein Abruf wieder
+          vollstaendig durchlaeuft.
+          EOF
             echo "Neues Issue angelegt."
           fi
 
@@ -116,9 +123,7 @@ vollstaendig durchlaeuft."
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           for n in $(gh issue list --state open --label abruf-fehler --json number --jq '.[].number'); do
-            gh issue close "$n" --comment "Abruf wieder vollstaendig erfolgreich.
-
-Lauf: $RUN_URL"
+            gh issue close "$n" --comment "Abruf wieder vollstaendig erfolgreich. Lauf: $RUN_URL"
             echo "Issue #${n} geschlossen."
           done
 
