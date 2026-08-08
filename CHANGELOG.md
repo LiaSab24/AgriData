@@ -28,6 +28,36 @@ Protokoll der Änderungen pro Session. Format: Datum · Was wurde geändert · W
   `.gitkeep`; keine personenbezogenen Daten in den 26 getrackten Dateien;
   Commit-Autor ist durchgehend die `users.noreply.github.com`-Adresse.
 
+### `ci`: Benachrichtigung bei fehlgeschlagenem Abruf
+
+- **Was:** Schlägt der Abruf fehl, legt der Workflow ein Issue mit dem Label
+  `abruf-fehler` an. Existiert bereits ein offenes, wird es stattdessen nur
+  kommentiert — es bleibt also bei genau einem Issue statt einer Flut.
+  Läuft der Abruf wieder vollständig durch, wird das offene Issue automatisch
+  geschlossen. Dafür wurde `permissions` um `issues: write` ergänzt.
+- **Warum zusätzlich zur E-Mail:** GitHub verschickt bei roten Läufen zwar
+  Mails, aber die gehen im Posteingang unter. Ein Issue ist im Repository
+  sichtbar, erzeugt selbst eine Benachrichtigung und dokumentiert nebenbei,
+  seit wann und wie oft der Abruf klemmt. Das automatische Schließen
+  verhindert, dass ein alter Eintrag ewig stehen bleibt und man nicht mehr
+  weiß, ob das Problem noch besteht.
+- **Inhalt des Issues:** Zeitpunkt, Link auf den Lauf und der Hinweis, dass
+  die häufigste Ursache eine vom DWD geänderte Bild-URL ist — samt Verweis auf
+  `config/app-config.ts`.
+- **Verifiziert:** Die drei `gh`-Aufrufe wurden vor dem Commit einzeln gegen
+  das echte Repository getestet (Issue anlegen mit Label, Wiederfinden für den
+  Duplikat-Schutz, Kommentieren, Schließen). Das Test-Issue wurde danach
+  gelöscht, das Label `abruf-fehler` bleibt für den Ernstfall bestehen.
+- **Stolperstein:** Direkt nach dem Anlegen findet `gh issue list --label` das
+  Issue noch nicht — die Suche ist wenige Sekunden verzögert indexiert. Für
+  den Duplikat-Schutz unkritisch, weil zwischen zwei Läufen ein Tag liegt.
+  Bei mehreren Fehlläufen innerhalb weniger Sekunden könnten allerdings
+  doppelte Issues entstehen.
+- **Nicht automatisierbar:** Die kontoweite Einstellung, ob GitHub überhaupt
+  E-Mails zu Actions verschickt, liegt unter
+  `github.com/settings/notifications` und ist nur über die Weboberfläche
+  änderbar — es gibt dafür keine API.
+
 ### `ci`: Täglichen Zeitplan aktivieren, Testbilder entfernen
 
 - **Was:** Der Workflow läuft jetzt zusätzlich per `schedule` — **ein** Lauf
